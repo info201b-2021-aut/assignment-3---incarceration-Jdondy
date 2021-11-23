@@ -1,0 +1,157 @@
+---
+title: 'Assignment 3: Incarceration'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+$\qquad$ One of the sharpest manifestations of racism in the United States is its prison system. A complex set of social and political structures, including the over-policing of individuals of color and the war on drugs have led to the disproportionate incarceration of people of color. 
+
+$\qquad$ In order to combat such inequalities, I will be analyzing various data sets to expose patterns of inconsistencies within the United States prison system. 
+
+$\qquad$ The variables I will be using to measure the prison admission numbers between black/white populations are **black_prison_adm**, **white_prison_adm**, and **total_prison_adm**. These variables will give me a sense of the inequalities among races when it comes to the United States prison system.
+ 
+## Summary
+
+$\qquad$ The state with the highest black prison admission is Illinois, with the highest admission rate being in Cook County. The state with the lowest black prison admission is Alabama. I was not expecting the lowest black prison admission to be anywhere in the south, but I was proved wrong. The year with the highest black prison admission was 2004, with lowest being in 2002. This is a smaller gap between the maximum/minimum values than expected. 
+
+## Trends Over Time
+
+```{r include=FALSE}
+library("tidyverse")
+jurisdiction_level <- read.csv("https://github.com/vera-institute/incarceration-trends/blob/master/incarceration_trends.csv?raw=true")
+d1 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(bmean = mean(na.omit(black_prison_adm)))
+d2 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(wmean = mean(na.omit(white_prison_adm)))
+d3 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(tmean = mean(na.omit(total_prison_adm))) 
+```
+```{r echo=FALSE, results='hide',message=FALSE, warning=FALSE}
+ggplot (d1, aes(x= year, y= bmean)) + 
+  geom_point(size = 2, color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_smooth(color = "red") +
+  ggtitle("Average Black Prison Admission Over Time") +
+  xlab("Time Progressing (Yearly)") +
+  ylab("Average Black Prison Admission")
+
+ggplot (d2, aes(x= year, y= wmean)) + 
+  geom_point(size = 2, color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_smooth(color = "red") +
+  ggtitle("Average White Prison Admission Over Time") +
+  xlab("Time Progressing (Yearly)") +
+  ylab("Average White Prison Admission")
+```
+
+$\qquad$ I chose to create these prison admission over time graphs because I thought it would provide a better way to see a pattern in prison admission inequalities. Using the averages for prison admissions in each year, the graph(s) examine how prison admissions have changed between the years 1970 and 2018.
+
+$\qquad$ The graph showing the black prison admission shows extremely high average prison admission numbers going into the early 2000's and continuing throughout the decade, with the curve going back down after 2010.
+
+$\qquad$ The graph showing the white prison admission shows a much lower maximum then that of the black prison admissions, but a more linear increase throughout the years, with only a very slight dip after 2010. 
+
+$\qquad$ What these graphs show is that there *is* an inequality in prison admissions when comparing black and white numbers, or at least there *was*. Throughout the 2000's the black prison admission numbers skyrocketed much higher than any white prison admission number has ever been, and it continued for about a decade, which is the point where inequality is shown.
+
+## Variable Comparison
+
+```{r include=FALSE}
+library("tidyverse")
+d1 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(bmean = mean(na.omit(black_prison_adm)))
+d2 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(wmean = mean(na.omit(white_prison_adm)))
+d3 <- jurisdiction_level %>%
+  group_by(year) %>%
+  summarise(tmean = mean(na.omit(total_prison_adm)))
+joindata <- na.omit(left_join(d3,d1))
+```
+```{r echo=FALSE, results='hide',message=FALSE, warning=FALSE}
+ggplot (joindata, aes(x= tmean, y= bmean)) + 
+  geom_point(size = 2, color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_smooth(color = "red") +
+  ggtitle("Avg Black Prison Admission per Year vs. Avg Total Prison Admission per Year") +
+  xlab("Average Total Yearly Prison Admission") +
+  ylab("Average Yearly Black Prison Admission")
+```
+
+$\qquad$ This variable comparison chart was intended to show how the average black prison admissions change when the total prison admissions (all races) change. This graph shows a much more linear pattern than expected which doesn't show much about the inequalities in the US prison system, however, there are still more data points above the best fit line. This means that when the total prison admission numbers increase, the black population is likely to be affected the most. 
+
+## Map comparisons
+```{r include=FALSE}
+library("usmap")
+library("maps")
+library("mapdata")
+library("mapproj")
+library("usdata")
+jurisdiction_level$black_prison_adm[is.na(jurisdiction_level$black_prison_adm)] = 0
+burger <- jurisdiction_level %>%
+  filter (year == 2016) %>%
+  group_by(state) %>%
+  summarise(bmean = mean(black_prison_adm))
+hot_dog <- jurisdiction_level %>%
+  filter (year == 1990) %>%
+  group_by(state) %>%
+  summarise(bmean = mean(black_prison_adm))
+state_shape <- map_data("state")
+state_shape$region <- state2abbr(state_shape$region)
+state_shape <- state_shape %>%
+  rename(state = region) %>%
+  left_join(burger, by="state") 
+blank_theme <- theme_bw() +
+  theme(
+    axis.line = element_blank(),       
+    axis.text = element_blank(),        
+    axis.ticks = element_blank(),     
+    axis.title = element_blank(),       
+    plot.background = element_blank(),  
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    panel.border = element_blank()      
+  )
+state_shape2 <- map_data("state")
+state_shape2$region <- state2abbr(state_shape2$region)
+state_shape2 <- state_shape2 %>%
+  rename(state = region) %>%
+  left_join(hot_dog, by="state")
+```
+```{r echo=FALSE, results='hide',message=FALSE, warning=FALSE}
+ggplot(state_shape) +
+  geom_polygon(
+    mapping = aes(x = long, y = lat, group = group, fill = bmean),
+    color = "white", 
+    size = .1        
+  ) +
+  coord_quickmap() +
+  scale_fill_continuous(low = "#132B43", high = "Red") +
+  labs(fill = "Black Prison Admission") +
+  ggtitle("Black Prison Admission Across the US in 2016") +
+  blank_theme 
+
+ggplot(state_shape2) +
+  geom_polygon(
+    mapping = aes(x = long, y = lat, group = group, fill = bmean),
+    color = "white", 
+    size = .1        
+  ) +
+  coord_quickmap() +
+  scale_fill_continuous(low = "#132B43", high = "Red") +
+  labs(fill = "Black Prison Admission") +
+  ggtitle("Black Prison Admission Across the US in 1990") +
+  blank_theme 
+```
+
+$\qquad$ These maps were created to paint a better visual picture how average black prison admission numbers have changed in the United States from 1990 - 2016. What these maps show is just how many more states have increased their average black prison admission numbers, including but not limited to: California,Arizona, and Nevada with some of the most notable changes. In an equal prison system, changes throughout time are going to happen, but not this drastically, which is another point that raises concern for how the US prison system is ran. 
+
+
+Jeremy J. Dondoyano - 11/2021
